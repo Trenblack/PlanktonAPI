@@ -1,8 +1,7 @@
-from util.helper import *
-from .schemas import *
 from fastapi import Depends
-from util.db import get_db
+from util.helper import *
 from util.settings import PERMISSIONS
+from .schemas import *
 
 ###############################################################
 """PUBLIC PERMISSION: NO ACCESS TOKEN REQUIRED"""
@@ -24,7 +23,7 @@ async def register_user(user: UserRegistration, db: AsyncSession = Depends(get_d
     await db.refresh(new_user)
     return new_user
 
-@app.post("/{}/tokens".format(PERMISSIONS["public"]))
+@app.post("/{}/tokens".format(PERMISSIONS["public"]), response_model=TokenData)
 async def get_tokens(user: UserLogin, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).filter(User.email == user.email))
     row = result.scalars().first()
@@ -42,12 +41,13 @@ async def get_tokens(user: UserLogin, db: AsyncSession = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = auther.generate_access_jwt({"id": row.id, "email": row.email})
-    refresh_token = auther.generate_refresh_jwt({"id": row.id, "email": row.email})
+    payload = {"id":row.id, "email":row.email}
+    access_token = auther.generate_access_jwt(payload)
+    refresh_token = auther.generate_refresh_jwt(payload)
     data = {
         "access_token": access_token,
-        "token_type": "bearer",
-        "refresh_token": refresh_token
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
     }
     return data
 
@@ -55,17 +55,19 @@ async def get_tokens(user: UserLogin, db: AsyncSession = Depends(get_db)):
 """MIDDLE PERMISSION: ACCESS TOKEN REQUIRED"""
 ###############################################################
 
-@app.post("/{}/tokens/refresh".format(PERMISSIONS["middle"]))
+@app.post("/{}/tokens/refresh".format(PERMISSIONS["middle"]), response_model=TokenData)
 async def get_access_from_refresh(request: Request):
     refresh_token = header_to_token(request)
-    is_valid, data = auther.refresh_to_access(refresh_token)
-    if is_valid:
-        data["refresh_token"] = refresh_token
-        data["token_type"] = "bearer"
-        return data
-    return {
-        "error": "can't get access from refresh"
-    }
+    response = auther.refresh_to_access(refresh_token)
+    if not response["is_valid"]:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh Token Invalid",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    response["refresh_token"] = refresh_token
+    response["token_type"] = "bearer"
+    return response
 
 ###############################################################
 """PRIVATE PERMISSION: USER-INFER FROM ACCESS TOKEN REQUIRED"""

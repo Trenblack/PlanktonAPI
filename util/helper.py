@@ -4,7 +4,7 @@ from sqlalchemy.future import select
 from app.models import User
 from contextlib import asynccontextmanager
 from .auth import Auther
-from .db import create_db_tables
+from .db import create_db_tables, get_db
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,14 +26,14 @@ def header_to_token(request: Request):
     return token
 
 def token_to_user_id(token: str):
-    is_valid, payload = auther.validate_access_jwt(token)
-    if not is_valid:
+    decoded = auther.validate_access_jwt(token)
+    if not decoded.get("is_valid"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=payload.get("error", "Invalid token"),
+            detail=decoded.get("error", "Invalid Token"),
             headers={"WWW-Authenticate": "Bearer"},
         )
-    user_id = payload.get("id")
+    user_id = decoded.get("id")
     if not user_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

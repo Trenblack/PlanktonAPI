@@ -35,32 +35,31 @@ class Auther:
         return encoded
 
     def validate_access_jwt(self, token):
-        # access -> Status,Id,Email
-        data = [False, {}]  # valid:bool, payload:dict
+        response = dict()
         try:
             decoded = jwt.decode(token, SECRET_KEY, algorithms=[JWT_ALGORITHM])
-            if decoded["type"] == "access":
-                data = [True, decoded]
+            if decoded.get("type") == "access":
+                response.update({"is_valid":True})
+                response.update(decoded)
             else:
-                data = [False, {"error": "Wrong Token Type"}]
+                response.update({"is_valid":True, "error": "Wrong Token Type"})
         except jwt.ExpiredSignatureError:
-            data = [False, {"error": "Access token has expired"}]
+            response.update({"is_valid":True, "error": "Access token has expired"})
         except jwt.InvalidTokenError:
-            data = [False, {"error": "Invalid access token"}]
-        return data
+            response.update({"is_valid":True, "error": "Invalid access token"})
+        return response
 
     def refresh_to_access(self, token):
-        # refresh -> access
-        data = [False, {}]  # valid:bool, jwt:token
+        response = dict()
         try:
             decoded = jwt.decode(token, SECRET_KEY, algorithms=[JWT_ALGORITHM])
-            if decoded["type"] == "refresh":
+            if decoded.get("type") == "refresh":
                 new_access_jwt = self.generate_access_jwt(decoded)
-                data = [True, {"access_token": new_access_jwt}]
+                response.update({"is_valid": True, "access_token": new_access_jwt})
             else:
-                data = [False, {"error": "Wrong Token Type"}]
+                response.update({"is_valid":False, "error": "Wrong Token Type"})
         except jwt.ExpiredSignatureError:
-            data = [False, {"error": "Refresh token has expired"}]
+            response.update({"is_valid": False, "error": "Refresh token has expired"})
         except jwt.InvalidTokenError:
-            data = [False, {"error": "Invalid refresh token"}]
-        return data
+            response.update({"is_valid": False, "error": "Invalid refresh token"})
+        return response
