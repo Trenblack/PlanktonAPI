@@ -1,7 +1,7 @@
 from fastapi import Depends
 from util.helper import *
-from util.settings import PERMISSIONS
-from .schemas import *
+from app.settings import PERMISSIONS
+from app.schemas import *
 
 ###############################################################
 """PUBLIC PERMISSION: NO ACCESS TOKEN REQUIRED"""

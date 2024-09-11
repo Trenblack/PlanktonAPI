@@ -1,7 +1,7 @@
 from argon2 import PasswordHasher
 from datetime import datetime, timedelta
 import jwt
-from .settings import SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
+from app.settings import SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
 
 hasher = PasswordHasher()
 
