@@ -71,7 +71,7 @@ The power of PlanktonAPI lies in its simplicity. After the initial setup, you ca
 
 ## Contributing
 
-We welcome contributions to PlanktonAPI! If you have suggestions for improvements or bug fixes, please feel free to submit a Pull Request.
+Feel free to submit a Pull Request.
 
 ## License
 
