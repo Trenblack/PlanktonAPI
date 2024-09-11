@@ -1,4 +1,8 @@
 .env
 .DS_Store
 venv/
+__pycache__/
+pyrightconfig.json
+test.db
+frontend.py
 
