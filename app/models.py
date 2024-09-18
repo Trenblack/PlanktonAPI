@@ -1,4 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean, Date
+from sqlalchemy import (
+    Column, Integer, String, Boolean, Date,
+    ForeignKey
+)
 from util.db import Base
 
 class User(Base):
@@ -8,9 +11,10 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     hashed_password = Column(String, nullable=False)
 
-    """Additional Attributes"""
-    first_name = Column(String, unique=False, nullable=False)
-    dob = Column(Date, nullable=False)
-    bio = Column(String, nullable=True)
-    gender = Column(String(1), nullable=False)
-    profile_complete = Column(Boolean, default=False)
+class Profile(Base):
+    __tablename__ = "profiles"
+
+    uid = Column(Integer, ForeignKey("users.id"), primary_key=True)
+
+    """ADDITIONAL ATTRIBUTES"""
+    first_name = Column(String, unique=False)

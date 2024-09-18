@@ -10,9 +10,7 @@ REFRESH_TOKEN_EXPIRE_DAYS = 30
 
 DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
-# Endpoints
-PERMISSIONS = {
-    "private": "me",
-    "middle": "mid",
-    "public": "api"
-}
+
+PUBLIC = "/api/"
+PRIVATE = "/me/"
+MIDDLE = "/mid/"

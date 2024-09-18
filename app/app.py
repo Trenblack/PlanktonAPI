@@ -1,31 +1,26 @@
 from fastapi import Depends
 from util.helper import *
-from app.settings import PERMISSIONS
 from app.schemas import *
+from app.settings import PUBLIC, PRIVATE, MIDDLE
 
 ###############################################################
 """PUBLIC PERMISSION: NO ACCESS TOKEN REQUIRED"""
 ###############################################################
 
-@app.post("/{}/register/".format(PERMISSIONS["public"]))
-async def register_user(user: UserRegistration, db: AsyncSession = Depends(get_db)):
+@app.post(PUBLIC + "credentials/create")
+async def save_credentials(cred: Credentials, db: AsyncSession = Depends(get_db)):
     new_user = User(
-        email=user.email,
-        first_name = user.first_name,
-        hashed_password=auther.hash(user.password),
-        dob=user.dob,
-        bio=user.bio,
-        gender=user.gender,
-        profile_complete = False
+        email=cred.email,
+        hashed_password=auther.hash(cred.password),
     )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
     return new_user
 
-@app.post("/{}/tokens".format(PERMISSIONS["public"]), response_model=TokenData)
-async def get_tokens(user: UserLogin, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).filter(User.email == user.email))
+@app.post(PUBLIC + "tokens/get", response_model=TokenData)
+async def credentials_to_tokens(cred: Credentials, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).filter(User.email == cred.email))
     row = result.scalars().first()
 
     if not row:
@@ -34,7 +29,7 @@ async def get_tokens(user: UserLogin, db: AsyncSession = Depends(get_db)):
             detail="User not found"
         )
 
-    if not auther.equals(row.hashed_password, user.password):
+    if not auther.equals(row.hashed_password, cred.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Wrong password",
@@ -55,11 +50,21 @@ async def get_tokens(user: UserLogin, db: AsyncSession = Depends(get_db)):
 """MIDDLE PERMISSION: ACCESS TOKEN REQUIRED"""
 ###############################################################
 
-@app.post("/{}/tokens/refresh".format(PERMISSIONS["middle"]), response_model=TokenData)
+@app.get(MIDDLE + "users/all", response_model=List[ProfileOut])
+async def get_all_users(request: Request, db: AsyncSession = Depends(get_db)):
+    _ = await header_to_user_id(request)
+    users = (await db.execute(select(User))).scalars().all()
+    return users
+
+###############################################################
+"""PRIVATE PERMISSION: USER-INFER FROM ACCESS TOKEN REQUIRED"""
+###############################################################
+
+@app.get(PRIVATE + "tokens/refresh", response_model=TokenData)
 async def get_access_from_refresh(request: Request):
     refresh_token = header_to_token(request)
     response = auther.refresh_to_access(refresh_token)
-    if not response["is_valid"]:
+    if not response.get("is_valid"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh Token Invalid",
@@ -69,11 +74,7 @@ async def get_access_from_refresh(request: Request):
     response["token_type"] = "bearer"
     return response
 
-###############################################################
-"""PRIVATE PERMISSION: USER-INFER FROM ACCESS TOKEN REQUIRED"""
-###############################################################
-
-@app.get("/{}/profile".format(PERMISSIONS["private"]), response_model=UserProfilePublic)
+@app.get(PRIVATE + "self", response_model=ProfileOut)
 async def get_user_profile(request: Request, db: AsyncSession = Depends(get_db)):
     current_user = await header_to_user_object(request, db)
     return current_user
