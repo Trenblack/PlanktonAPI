@@ -10,7 +10,6 @@ REFRESH_TOKEN_EXPIRE_DAYS = 30
 
 DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
-
 PUBLIC = "/api/"
 PRIVATE = "/me/"
 MIDDLE = "/mid/"

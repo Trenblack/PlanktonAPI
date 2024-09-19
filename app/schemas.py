@@ -14,6 +14,5 @@ class Credentials(BaseModel):
 class ProfileOut(BaseModel):
     id: int
     email: EmailStr
-    first_name: Optional[Annotated[str, StringConstraints(min_length=1, max_length=50)]]
 
     model_config = ConfigDict(from_attributes=True)
