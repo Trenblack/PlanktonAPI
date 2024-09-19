@@ -7,7 +7,7 @@ from app.settings import PUBLIC, PRIVATE, MIDDLE
 """PUBLIC PERMISSION: NO ACCESS TOKEN REQUIRED"""
 ###############################################################
 
-@app.post(PUBLIC + "credentials/create")
+@app.post(PUBLIC + "register")
 async def save_credentials(cred: Credentials, db: AsyncSession = Depends(get_db)):
     new_user = User(
         email=cred.email,
@@ -18,7 +18,7 @@ async def save_credentials(cred: Credentials, db: AsyncSession = Depends(get_db)
     await db.refresh(new_user)
     return new_user
 
-@app.post(PUBLIC + "credentials/tokens", response_model=TokenData)
+@app.post(PUBLIC + "login", response_model=TokenData)
 async def credentials_to_tokens(cred: Credentials, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).filter(User.email == cred.email))
     row = result.scalars().first()
@@ -60,7 +60,7 @@ async def get_all_users(request: Request, db: AsyncSession = Depends(get_db)):
 """PRIVATE PERMISSION: USER-INFER FROM ACCESS TOKEN REQUIRED"""
 ###############################################################
 
-@app.get(PRIVATE + "tokens/refresh", response_model=TokenData)
+@app.get(PRIVATE + "refresh", response_model=TokenData)
 async def get_access_from_refresh(request: Request):
     refresh_token = header_to_token(request)
     response = auther.refresh_to_access(refresh_token)
