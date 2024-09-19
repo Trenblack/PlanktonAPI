@@ -18,7 +18,7 @@ async def save_credentials(cred: Credentials, db: AsyncSession = Depends(get_db)
     await db.refresh(new_user)
     return new_user
 
-@app.post(PUBLIC + "tokens/get", response_model=TokenData)
+@app.post(PUBLIC + "credentials/tokens", response_model=TokenData)
 async def credentials_to_tokens(cred: Credentials, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).filter(User.email == cred.email))
     row = result.scalars().first()
