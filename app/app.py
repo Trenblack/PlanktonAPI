@@ -7,6 +7,10 @@ from app.settings import PUBLIC, PRIVATE, MIDDLE
 """PUBLIC PERMISSION: NO ACCESS TOKEN REQUIRED"""
 ###############################################################
 
+@app.get(PUBLIC + "health")
+async def health():
+    return {"status": "ok"}
+
 @app.post(PUBLIC + "register")
 async def save_credentials(cred: Credentials, db: AsyncSession = Depends(get_db)):
     new_user = User(
