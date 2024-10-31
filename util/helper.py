@@ -5,6 +5,7 @@ from app.models import User
 from contextlib import asynccontextmanager
 from util.auth import Auther
 from util.db import create_db_tables, get_db
+from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -13,6 +14,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 auther = Auther()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def header_to_token(request: Request):
     auth_header = request.headers.get("Authorization")
