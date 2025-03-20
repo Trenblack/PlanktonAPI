@@ -1,8 +1,68 @@
+# Environment variables
 .env
-.DS_Store
+.env.*
+.envlocal
+
+# Python virtual environments
 venv/
+venv/*
+/venv
+/venv/*
+VENV/
+VENV/*
+/VENV
+/VENV/*
+
+# Byte-compiled files
 __pycache__/
-pyrightconfig.json
+*.py[cod]
+*.pyo
+*.pyc
+*.pyd
+
+# System files
+.DS_Store
+*/.DS_Store
+.DS_Store*/
+
+# Editor and OS metadata
+*.swp
+*.swo
+*.swn
+*.sublime-project
+*.sublime-workspace
+.idea/
+.vscode/
+*.iml
+
+# Database files
+*.sqlite3
+*.db
+*.sqlite
 test.db
+
+# Logs and other runtime files
+*.log
+logs/
+*.pid
+*.seed
+*.out
+
+# Linter and Type Checker
+pyrightconfig.json
+mypy_cache/
+
+# Compiled files
+*.so
+
+# FastAPI specific
 frontend.py
 
+# Dependency management
+Pipfile
+Pipfile.lock
+poetry.lock
+
+# Cache
+__pycache__/
+.cache/
