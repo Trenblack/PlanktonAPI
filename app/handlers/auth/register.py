@@ -3,7 +3,8 @@ User registration endpoint handler module.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import Depends
+from fastapi import Depends, HTTPException
+from sqlalchemy import select
 from app.schemas import RegisterCredentials, PrivateProfileOut, ProfileBase
 from app.models import User, Profile
 from util.helper import get_auther
@@ -22,6 +23,16 @@ async def register(
     require_verified: bool = REQUIRE_USERS_VERIFIED
 ) -> PrivateProfileOut:
     """Register a new user with email and password"""
+    
+    # Check if user with this email already exists
+    existing_user_stmt = select(User).where(User.email == req.email)
+    existing_user = await db.execute(existing_user_stmt)
+    if existing_user.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="A user with this email address already exists"
+        )
+    
     # Create User record
     new_user = User(
         email=req.email,
