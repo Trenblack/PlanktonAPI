@@ -1,84 +1,56 @@
-from fastapi import Depends
-from util.helper import *
-from app.schemas import *
-from app.settings import PUBLIC, PRIVATE, MIDDLE
+from fastapi import FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+import logging
+from app.routes import router
+from app.settings import ALLOWED_ORIGINS
+from util.helper import lifespan, CustomJSONResponse
 
-###############################################################
-"""PUBLIC PERMISSION: NO ACCESS TOKEN REQUIRED"""
-###############################################################
+# Set up logger for this module
+logger = logging.getLogger(__name__)
 
-@app.get(PUBLIC + "health")
-async def health():
-    return {"status": "ok"}
+app = FastAPI(
+    title="Plankton API",
+    description="API for FastAPI Application",
+    version="1.0.0",
+    lifespan=lifespan,
+    default_response_class=CustomJSONResponse
+)
 
-@app.post(PUBLIC + "register")
-async def save_credentials(cred: Credentials, db: AsyncSession = Depends(get_db)):
-    new_user = User(
-        email=cred.email,
-        hashed_password=auther.hash(cred.password),
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"]
+)
+    
+# Global exception handlers
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    logger.error(f"HTTP error: {exc.status_code} - {exc.detail}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
     )
-    db.add(new_user)
-    await db.commit()
-    await db.refresh(new_user)
-    return new_user
 
-@app.post(PUBLIC + "login", response_model=TokenData)
-async def credentials_to_tokens(cred: Credentials, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).filter(User.email == cred.email))
-    row = result.scalars().first()
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(f"Validation error: {str(exc)}")
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": exc.errors()},
+    )
 
-    if not row:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal server error"},
+    )
 
-    if not auther.equals(row.hashed_password, cred.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Wrong password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    payload = {"id":row.id, "email":row.email}
-    access_token = auther.generate_access_jwt(payload)
-    refresh_token = auther.generate_refresh_jwt(payload)
-    data = {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer"
-    }
-    return data
-
-###############################################################
-"""MIDDLE PERMISSION: ACCESS TOKEN REQUIRED"""
-###############################################################
-
-@app.get(MIDDLE + "users/all", response_model=List[ProfileOut])
-async def get_all_users(request: Request, db: AsyncSession = Depends(get_db)):
-    _ = await header_to_user_id(request)
-    users = (await db.execute(select(User))).scalars().all()
-    return users
-
-###############################################################
-"""PRIVATE PERMISSION: USER-INFER FROM ACCESS TOKEN REQUIRED"""
-###############################################################
-
-@app.get(PRIVATE + "refresh", response_model=TokenData)
-async def get_access_from_refresh(request: Request):
-    refresh_token = header_to_token(request)
-    response = auther.refresh_to_access(refresh_token)
-    if not response.get("is_valid"):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh Token Invalid",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    response["refresh_token"] = refresh_token
-    response["token_type"] = "bearer"
-    return response
-
-@app.get(PRIVATE + "self", response_model=ProfileOut)
-async def get_user_profile(request: Request, db: AsyncSession = Depends(get_db)):
-    current_user = await header_to_user_object(request, db)
-    return current_user
+app.include_router(router)
